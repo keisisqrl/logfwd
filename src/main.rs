@@ -10,7 +10,7 @@ use logfwd::udp_recv::Receiver;
 use logfwd::tls_send::Sender;
 use logfwd::clean_kill::kill_handler;
 
-use log::{info, LevelFilter, debug, trace};
+use log::{LevelFilter, debug, trace};
 
 #[tokio::main]
 async fn main() {
@@ -90,4 +90,6 @@ async fn main() {
     debug!(target: "main", "systemd notified, joining all tasks");
 
     sig_intercept.await.unwrap().unwrap();
+    return;
+    
 }

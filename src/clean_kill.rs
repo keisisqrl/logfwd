@@ -45,4 +45,3 @@ pub async fn kill_handler(send_task: task::JoinHandle<crate::NothingError>, chan
 
     Ok(())
 }
-

@@ -4,6 +4,7 @@ use std::os::unix::io::{FromRawFd, RawFd};
 use std::net::UdpSocket as StdUdp;
 use tokio::net::UdpSocket;
 use tokio::sync::mpsc;
+use tokio::task;
 
 use log::{debug,trace};
 
@@ -40,7 +41,8 @@ impl Receiver {
 
             trace!(target: "udp_receiver_run", "sending message {:?} to channel", to_send);
             self.send_channel.send(to_send).await?;
-            trace!(target: "udp_receiver_run", "send finished");
+            trace!(target: "udp_receiver_run", "send finished, yielding");
+            task::yield_now().await;
         }
     }
 }
