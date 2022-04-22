@@ -16,7 +16,7 @@ use log::{LevelFilter, debug, trace};
 async fn main() {
     systemd_journal_logger::init().unwrap();
 
-    log::set_max_level(LevelFilter::Trace);
+    log::set_max_level(LevelFilter::Info);
 
     debug!("Init journald logging");
 
