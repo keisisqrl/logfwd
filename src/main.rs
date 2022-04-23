@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use logfwd::udp_recv::Receiver;
 use logfwd::tls_send::Sender;
-use logfwd::clean_kill::kill_handler;
+use logfwd::clean_kill;
 
 use log::{LevelFilter, debug, trace};
 
@@ -47,9 +47,7 @@ async fn main() {
 
     trace!(target: "main", "Set up TLS sender");
 
-    let sender_clone=chan_send.clone();
-
-    let flusher = logfwd::drano::Flusher::new(5000,sender_clone);
+    let flusher = logfwd::drano::Flusher::new(5000,&chan_send);
 
     trace!(target: "main", "Set up interval flusher");
 
@@ -72,13 +70,15 @@ async fn main() {
     trace!(target: "main", "spawned TLS loop");
 
     let flush_task = tokio::spawn(
-        async move {flusher.run().await}
+        flusher
     );
 
     trace!(target: "main", "spawned flusher loop");
 
+    let interceptor = clean_kill::Handler::new(&chan_send);
+
     let sig_intercept = tokio::spawn(
-        async move{kill_handler(tls_task,chan_send).await}
+        interceptor
     );
 
     trace!(target:"main", "spawned signal listener");
@@ -89,7 +89,8 @@ async fn main() {
 
     debug!(target: "main", "systemd notified, joining all tasks");
 
-    sig_intercept.await.unwrap().unwrap();
+    sig_intercept.await.unwrap();
+    tls_task.await.unwrap().unwrap();
     return;
     
 }

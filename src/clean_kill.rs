@@ -1,12 +1,16 @@
-use tokio::signal::unix::{SignalKind,signal};
-use tokio::sync::mpsc::Sender;
-use tokio::task;
 use crate::FwdMsg;
 use libsystemd::daemon;
+use tokio::signal::unix::{ signal, Signal, SignalKind};
+use tokio::sync::mpsc::Sender;
 
-use std::error::Error;
-use std::fmt;
-use log::{trace,debug,info};
+use log::{debug, info, trace};
+use std::{
+    error::Error,
+    fmt,
+    future::Future,
+    pin::Pin,
+    task::{Context, Poll},
+};
 
 #[derive(Debug)]
 struct Exiting;
@@ -17,31 +21,33 @@ impl fmt::Display for Exiting {
     }
 }
 
-impl Error for Exiting {} 
+impl Error for Exiting {}
 
-pub async fn kill_handler(send_task: task::JoinHandle<crate::NothingError>, channel: Sender<FwdMsg>) 
-    -> crate::NothingError {
-    let mut stream = signal(SignalKind::terminate())?;
-    
-    debug!(target:"clean_kill", "waiting for sigterm");
+pub struct Handler {
+    signal: Signal,
+    channel: Sender<FwdMsg>,
+}
 
-    stream.recv().await;
+impl Handler {
+    pub fn new(parent_send: &Sender<FwdMsg>) -> Self {
+        Self {
+            signal: signal(SignalKind::interrupt()).unwrap(),
+            channel: parent_send.clone()
+        }
+    }
+}
 
-    info!(target: "clean_kill", "sigterm received, shutting down");
+impl Future for Handler {
+    type Output = ();
 
-    trace!(target: "clean_kill", "notifying systemd of stopping status");
-
-    daemon::notify(false,&[daemon::NotifyState::Stopping]).unwrap();
-
-    trace!(target: "clean_kill", "systemd notified, telling tls sender to close");
-
-    channel.send(FwdMsg::Close).await?;
-
-    trace!(target: "clean_kill", "sent msg to tls sender, waiting for it to finish");
-
-    send_task.await??;
-
-    debug!(target: "clean_kill", "signal handler finished");
-
-    Ok(())
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        if let Poll::Pending = self.signal.poll_recv(cx) {
+            Poll::Pending
+        } else {
+            info!(target: "clean_kill", "sigterm received, shutting down");
+            daemon::notify(false, &[daemon::NotifyState::Stopping]).unwrap();
+            self.channel.try_send(FwdMsg::Close).unwrap();
+            Poll::Ready(())
+        }
+    }
 }
