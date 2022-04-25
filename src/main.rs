@@ -55,8 +55,8 @@ async fn main() {
 
     debug!(target: "main", "Started TLS connection");
 
-    let _udp_task = tokio::spawn(
-        async move {udp_side.run().await}
+    let udp_task = tokio::spawn(
+        udp_side
     );
 
     trace!(target: "main", "spawned UDP loop");
@@ -67,7 +67,7 @@ async fn main() {
 
     trace!(target: "main", "spawned TLS loop");
 
-    let _flush_task = tokio::spawn(
+    let flush_task = tokio::spawn(
         flusher
     );
 
@@ -75,7 +75,7 @@ async fn main() {
 
     let interceptor = clean_kill::Handler::new(&chan_send);
 
-    let _sig_intercept = tokio::spawn(
+    let sig_intercept = tokio::spawn(
         interceptor
     );
 
@@ -87,8 +87,10 @@ async fn main() {
 
     debug!(target: "main", "systemd notified, joining all tasks");
 
-    //sig_intercept.await.unwrap();
     tls_task.await.unwrap().unwrap();
+    sig_intercept.await.unwrap();
+    flush_task.abort();
+    udp_task.abort();
     return;
     
 }

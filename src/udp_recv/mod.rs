@@ -4,13 +4,16 @@ use std::{
     net::UdpSocket as StdUdp,
     os::unix::io::{FromRawFd, RawFd},
 };
+use std::future::Future;
+use std::pin::Pin;
+use std::task::{Context, Poll};
 use tokio::{net::UdpSocket, sync::mpsc};
-
-use log::{debug, trace};
+use tokio::io::ReadBuf;
+use tokio_util::sync::PollSender;
 
 pub struct Receiver {
     recv_socket: UdpSocket,
-    send_channel: mpsc::Sender<FwdMsg>,
+    send_channel: PollSender<FwdMsg>,
 }
 
 impl Receiver {
@@ -24,29 +27,47 @@ impl Receiver {
         let tokio_socket: UdpSocket = UdpSocket::from_std(std_socket).unwrap();
         return Receiver {
             recv_socket: tokio_socket,
-            send_channel: send_half.clone(),
+            send_channel: PollSender::new(send_half.clone())
         };
     }
 
-    pub async fn run(&self) -> crate::NothingError {
-        debug!(target: "udp_receiver_run", "entering loop");
-        loop {
-            let mut buf: Vec<u8> = vec![0; 1500];
+}
 
-            trace!(target: "udp_receiver_run", "waiting for datagram, should yield");
-            let len: usize = self.recv_socket.recv(&mut buf).await?;
+impl Future for Receiver {
+    type Output = crate::NothingError;
 
-            buf.truncate(len);
+    fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
+        
+        if let Poll::Pending = self.send_channel.poll_reserve(cx) {
+            return Poll::Pending;
+        }
 
-            trace!(target: "udp_receiver_run", "received {} bytes, truncated buf to {}", len, buf.len());
+        let mut buf: Vec<u8> = vec![0;9000];
+        let mut readbuf = ReadBuf::new(&mut buf);
 
-            let to_send: Box<[u8]> = buf.into_boxed_slice();
+        match self.recv_socket.poll_recv(cx,&mut readbuf) {
+            Poll::Ready(Ok(())) => {
+                let msg = Vec::from(readbuf.filled());
 
-            let to_send: FwdMsg = FwdMsg::Message(to_send);
+                let msg = FwdMsg::Message(
+                    msg.into_boxed_slice()
+                );
 
-            trace!(target: "udp_receiver_run", "sending message {:?} to channel", to_send);
-            self.send_channel.send(to_send).await?;
-            trace!(target: "udp_receiver_run", "send finished");
+                if let Err(e) = self.send_channel.send_item(msg) {
+                    return Poll::Ready(Err(Box::new(e)));
+                } 
+
+                if let Poll::Ready(_) = self.recv_socket.poll_recv_ready(cx) {
+                    cx.waker().wake_by_ref();
+                }
+                Poll::Pending
+            }
+
+            Poll::Pending => Poll::Pending,
+
+            Poll::Ready(Err(e)) => {
+                Poll::Ready(Err(Box::new(e)))
+            }
         }
     }
 }
