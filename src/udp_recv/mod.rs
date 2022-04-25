@@ -1,32 +1,33 @@
 use crate::FwdMsg;
 
-use std::os::unix::io::{FromRawFd, RawFd};
-use std::net::UdpSocket as StdUdp;
-use tokio::net::UdpSocket;
-use tokio::sync::mpsc;
+use std::{
+    net::UdpSocket as StdUdp,
+    os::unix::io::{FromRawFd, RawFd},
+};
+use tokio::{net::UdpSocket, sync::mpsc};
 
-use log::{debug,trace};
+use log::{debug, trace};
 
 pub struct Receiver {
     recv_socket: UdpSocket,
-    send_channel: mpsc::Sender<FwdMsg>
+    send_channel: mpsc::Sender<FwdMsg>,
 }
 
 impl Receiver {
-    pub fn new(fd: RawFd, send_half: mpsc::Sender<FwdMsg>) -> Receiver {
+    pub fn new(fd: RawFd, send_half: &mpsc::Sender<FwdMsg>) -> Receiver {
         let std_socket: StdUdp = unsafe { StdUdp::from_raw_fd(fd) };
         std_socket.set_nonblocking(true).unwrap();
         let tokio_socket: UdpSocket = UdpSocket::from_std(std_socket).unwrap();
         return Receiver {
             recv_socket: tokio_socket,
-            send_channel: send_half
-        }
+            send_channel: send_half.clone(),
+        };
     }
 
     pub async fn run(&self) -> crate::NothingError {
         debug!(target: "udp_receiver_run", "entering loop");
         loop {
-            let mut buf: Vec<u8> = vec![0;1500];
+            let mut buf: Vec<u8> = vec![0; 1500];
 
             trace!(target: "udp_receiver_run", "waiting for datagram, should yield");
             let len: usize = self.recv_socket.recv(&mut buf).await?;

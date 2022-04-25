@@ -1,27 +1,14 @@
 use crate::FwdMsg;
 use libsystemd::daemon;
-use tokio::signal::unix::{ signal, Signal, SignalKind};
+use log::info;
+use tokio::signal::unix::{signal, Signal, SignalKind};
 use tokio::sync::mpsc::Sender;
 
-use log::{debug, info, trace};
 use std::{
-    error::Error,
-    fmt,
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
-
-#[derive(Debug)]
-struct Exiting;
-
-impl fmt::Display for Exiting {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Exiting due to signal")
-    }
-}
-
-impl Error for Exiting {}
 
 pub struct Handler {
     signal: Signal,
@@ -32,7 +19,7 @@ impl Handler {
     pub fn new(parent_send: &Sender<FwdMsg>) -> Self {
         Self {
             signal: signal(SignalKind::interrupt()).unwrap(),
-            channel: parent_send.clone()
+            channel: parent_send.clone(),
         }
     }
 }
