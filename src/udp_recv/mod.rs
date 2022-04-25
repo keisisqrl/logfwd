@@ -16,6 +16,10 @@ pub struct Receiver {
 impl Receiver {
     pub fn new(fd: RawFd, send_half: &mpsc::Sender<FwdMsg>) -> Receiver {
         let std_socket: StdUdp = unsafe { StdUdp::from_raw_fd(fd) };
+        // If you set systemd to give logfwd a nonblocking socket
+        // (NOT default) this is unnecessary, but it's harmless
+        // and good for safety. It took me ages to figure this
+        // problem out.
         std_socket.set_nonblocking(true).unwrap();
         let tokio_socket: UdpSocket = UdpSocket::from_std(std_socket).unwrap();
         return Receiver {
