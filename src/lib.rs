@@ -17,6 +17,8 @@ type NothingError = Result<(), Box<dyn std::error::Error + Send + Sync>>;
 /**
 `FwdMsg` is used for messaging between the sender and receiver half.
 It is sent over a [tokio::sync::mpsc] bounded channel.
+
+[tokio::sync::mpsc]: tokio::sync::mpsc
 */
 #[derive(Debug)]
 pub enum FwdMsg {
