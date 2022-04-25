@@ -1,5 +1,5 @@
-on: 
-  push: 
+on:
+  push:
     branches: [main]
 
 name: cargo doc
@@ -16,7 +16,7 @@ jobs:
       - uses: actions-rs/cargo@v1
         with:
           command: doc
-      - name: Create index.html 
+      - name: Create index.html
         uses: finnp/create-file-action@master
         env:
           FILE_NAME: "target/doc/index.html"
@@ -27,5 +27,5 @@ jobs:
           github_token: ${{ secrets.GITHUB_TOKEN }}
           publish_dir: ./target/doc
           force_orphan: true
-          user_name: 'github-actions[bot]'
-          user_email: 'github-actions[bot]@users.noreply.github.com'
+          user_name: "github-actions[bot]"
+          user_email: "github-actions[bot]@users.noreply.github.com"
