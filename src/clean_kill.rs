@@ -1,11 +1,7 @@
-use crate::FwdMsg;
-use crate::Shutdown;
-use futures_util::never::Never;
+use crate::{Error, FwdMsg, Shutdown};
 use libsystemd::daemon;
 use log::info;
-use tokio::signal::unix::{signal, Signal, SignalKind};
-use tokio::sync::mpsc::Sender;
-use tokio::sync::broadcast;
+use tokio::{signal::unix::{signal, Signal, SignalKind}, sync::{mpsc::Sender, broadcast}};
 
 use std::{
     future::Future,
@@ -22,7 +18,7 @@ pub struct Handler {
 impl Handler {
     pub fn new(parent_send: &Sender<FwdMsg>, bcast_send: &broadcast::Sender<Shutdown>) -> Self {
         Self {
-            signal: signal(SignalKind::interrupt()).unwrap(),
+            signal: signal(SignalKind::terminate()).unwrap(),
             channel: parent_send.clone(),
             bcast_send: bcast_send.clone()
         }
@@ -30,7 +26,7 @@ impl Handler {
 }
 
 impl Future for Handler {
-    type Output = Result<(),Never>;
+    type Output = Result<(),Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         if let Poll::Pending = self.signal.poll_recv(cx) {

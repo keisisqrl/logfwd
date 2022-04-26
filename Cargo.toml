@@ -16,6 +16,7 @@ log = "0.4.16"
 systemd-journal-logger = "0.5.0"
 tokio-util = "0.7.1"
 pin-project = "1.0.10"
+tokio-stream = { version = "0.1.8", features = ["sync"] }
 
 [profile.release]
 lto = true

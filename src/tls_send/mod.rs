@@ -83,9 +83,9 @@ impl Sender {
             }
         }
 
-        debug!(target: "tls_sender_run", "shutting down");
+        debug!("TLS sender shutting down");
         send_stream.shutdown().await?;
-        debug!(target: "tls_sender_run", "shutdown finished");
+        debug!("TLS sender shutdown finished");
 
         Ok(())
     }

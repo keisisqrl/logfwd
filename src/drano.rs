@@ -2,21 +2,20 @@
 //! 
 //! Contains the future [Flusher].
 
-use crate::FwdMsg;
-use crate::Shutdown;
-use futures_util::{Future, never::Never};
-use log::trace;
+use crate::{FwdMsg, Shutdown, Error};
+use futures_util::{Stream, Future};
+use log::{trace,debug};
 use std::{
     pin::Pin,
     task::{Context, Poll},
     time::Duration,
 };
 use tokio::{
-    sync::mpsc::Sender,
+    sync::{mpsc::Sender, broadcast},
     time::{self, Instant, Sleep},
 };
-use tokio::sync::broadcast;
 use tokio_util::sync::PollSender;
+use tokio_stream::wrappers::BroadcastStream;
 use pin_project::pin_project;
 
 /// `Flusher` is a custom future which never returns.
@@ -29,7 +28,8 @@ pub struct Flusher {
     #[pin]
     sender: PollSender<FwdMsg>,
     period: Duration,
-    bcast_listen: broadcast::Receiver<Shutdown>
+    #[pin]
+    bcast_stream: BroadcastStream<Shutdown>
 }
 
 impl Flusher {
@@ -47,25 +47,23 @@ impl Flusher {
             sleep,
             sender,
             period,
-            bcast_listen: bcast_send.subscribe()
+            bcast_stream: BroadcastStream::from(bcast_send.subscribe())
         }
     }
 
 }
 
 impl Future for Flusher {
-    type Output = Result<(),Never>;
+    type Output = Result<(),Error>;
 
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
 
         let period = self.period;
         let mut this = self.project();
 
-        match this.bcast_listen.try_recv() {
-            Err(broadcast::error::TryRecvError::Empty) => {}
-            _ => {
-                return Poll::Ready(Ok(()));
-            }
+        if let Poll::Ready(_) = this.bcast_stream.as_mut().poll_next(cx) {
+            debug!("flusher shutting down");
+            return Poll::Ready(Ok(()));
         }
 
         if let Poll::Pending = this.sleep.as_mut().poll(cx) {
