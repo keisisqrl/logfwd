@@ -1,3 +1,7 @@
+//! # clean_kill
+//! 
+//! Provides a signal handler on SIGTERM that shuts down cleanly
+
 use crate::{Error, FwdMsg, Shutdown};
 use libsystemd::daemon;
 use log::info;
@@ -9,6 +13,8 @@ use std::{
     task::{Context, Poll},
 };
 
+/// A future/task that returns only after the program receives a SIGTERM
+/// and messages have been sent to all other loops.
 pub struct Handler {
     signal: Signal,
     channel: Sender<FwdMsg>,
@@ -16,6 +22,9 @@ pub struct Handler {
 }
 
 impl Handler {
+    /// Create a new Handler
+    /// Takes a reference to the send half of the `mpsc` channel
+    /// and one to the `broadcast` channel.
     pub fn new(parent_send: &Sender<FwdMsg>, bcast_send: &broadcast::Sender<Shutdown>) -> Self {
         Self {
             signal: signal(SignalKind::terminate()).unwrap(),
