@@ -22,11 +22,12 @@ pub struct Receiver {
     recv_socket: UdpSocket,
     send_channel: PollSender<FwdMsg>,
     #[pin]
-    bcast_stream: BroadcastStream<Shutdown>
+    bcast_stream: BroadcastStream<Shutdown>,
+    buf_vec: Vec<u8>
 }
 
 impl Receiver {
-    pub fn new(fd: RawFd, send_half: &mpsc::Sender<FwdMsg>, bcast_send: &broadcast::Sender<Shutdown>) -> Receiver {
+    pub fn new(fd: RawFd, send_half: &mpsc::Sender<FwdMsg>, bcast_send: &broadcast::Sender<Shutdown>, buf_len: usize) -> Receiver {
         let std_socket: StdUdp = unsafe { StdUdp::from_raw_fd(fd) };
         // If you set systemd to give logfwd a nonblocking socket
         // (NOT default) this is unnecessary, but it's harmless
@@ -37,7 +38,8 @@ impl Receiver {
         return Receiver {
             recv_socket: tokio_socket,
             send_channel: PollSender::new(send_half.clone()),
-            bcast_stream: BroadcastStream::from(bcast_send.subscribe())
+            bcast_stream: BroadcastStream::from(bcast_send.subscribe()),
+            buf_vec: Vec::with_capacity(buf_len)
         };
     }
 
@@ -63,8 +65,7 @@ impl Future for Receiver {
             _ => ()
         }
 
-        let mut buf: Vec<u8> = vec![0;9000];
-        let mut readbuf = ReadBuf::new(&mut buf);
+        let mut readbuf = ReadBuf::uninit(this.buf_vec.spare_capacity_mut());
 
         match this.recv_socket.poll_recv(cx,&mut readbuf) {
             Poll::Ready(Ok(())) => {

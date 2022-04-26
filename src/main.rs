@@ -35,13 +35,13 @@ async fn main() {
     trace!("Got Fd: {}", raw_udp_fd);
     debug!(target: "main", "Init from systemd done");
 
-    let (chan_send, chan_recv) = mpsc::channel(1024);
+    let (chan_send, chan_recv) = mpsc::channel(512);
 
     let (bcast_send, _) = broadcast::channel::<logfwd::Shutdown>(16);
 
     trace!(target: "main", "Set up mpsc");
 
-    let udp_side = Receiver::new(raw_udp_fd,&chan_send, &bcast_send);
+    let udp_side = Receiver::new(raw_udp_fd,&chan_send, &bcast_send, 2048);
     
     trace!(target: "main", "Set up UDP receiver");
 
