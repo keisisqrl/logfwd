@@ -11,8 +11,14 @@ pub mod clean_kill;
 pub mod drano;
 pub mod tls_send;
 pub mod udp_recv;
+pub mod error;
+pub use error::Error;
 
 type NothingError = Result<(), Box<dyn std::error::Error + Send + Sync>>;
+
+/// Shutdown message
+#[derive(Clone,Debug)]
+pub struct Shutdown;
 
 /**
 `FwdMsg` is used for messaging between the sender and receiver half.

@@ -5,12 +5,14 @@ use libsystemd::daemon::NotifyState;
 use libsystemd::{activation, daemon};
 
 use tokio::sync::mpsc;
+use tokio::sync::broadcast;
 
 use logfwd::udp_recv::Receiver;
 use logfwd::tls_send::Sender;
 use logfwd::clean_kill;
 
 use log::{LevelFilter, debug, trace};
+use tokio::try_join;
 
 #[tokio::main]
 async fn main() {
@@ -35,9 +37,11 @@ async fn main() {
 
     let (chan_send, chan_recv) = mpsc::channel(1024);
 
+    let (bcast_send, _) = broadcast::channel::<logfwd::Shutdown>(16);
+
     trace!(target: "main", "Set up mpsc");
 
-    let udp_side = Receiver::new(raw_udp_fd,&chan_send);
+    let udp_side = Receiver::new(raw_udp_fd,&chan_send, &bcast_send);
     
     trace!(target: "main", "Set up UDP receiver");
 
@@ -45,7 +49,7 @@ async fn main() {
 
     trace!(target: "main", "Set up TLS sender");
 
-    let flusher = logfwd::drano::Flusher::new(5000,&chan_send);
+    let flusher = logfwd::drano::Flusher::new(5000,&chan_send, &bcast_send);
 
     trace!(target: "main", "Set up interval flusher");
 
@@ -73,7 +77,7 @@ async fn main() {
 
     trace!(target: "main", "spawned flusher loop");
 
-    let interceptor = clean_kill::Handler::new(&chan_send);
+    let interceptor = clean_kill::Handler::new(&chan_send, &bcast_send);
 
     let sig_intercept = tokio::spawn(
         interceptor
@@ -87,10 +91,16 @@ async fn main() {
 
     debug!(target: "main", "systemd notified, joining all tasks");
 
-    tls_task.await.unwrap().unwrap();
-    sig_intercept.await.unwrap();
-    flush_task.abort();
-    udp_task.abort();
-    return;
+    let (tls_ret, sig_ret, flush_ret, udp_ret) = try_join!(
+        tls_task,
+        sig_intercept,
+        flush_task,
+        udp_task
+    ).unwrap();
+
+    tls_ret.unwrap();
+    sig_ret.unwrap();
+    flush_ret.unwrap();
+    udp_ret.unwrap();
     
 }

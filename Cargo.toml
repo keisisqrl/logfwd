@@ -18,5 +18,4 @@ tokio-util = "0.7.1"
 pin-project = "1.0.10"
 
 [profile.release]
-strip = true
 lto = true
