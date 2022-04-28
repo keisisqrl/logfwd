@@ -14,7 +14,9 @@ use rustls::client::ServerName;
 
 use tls::get_client_config;
 use tracing::{trace,debug};
+use tracing::Instrument;
 
+#[derive(Debug)]
 pub struct Sender {
     send_stream: Option<TlsStream<TcpStream>>,
     recv_channel: Receiver<FwdMsg>,
@@ -32,8 +34,12 @@ impl Sender {
         }
     }
 
+    #[tracing::instrument(level="debug",name="tls init")]
     pub async fn init(&mut self) -> Result<(),Box<dyn Error>> {
-        let stream: TcpStream = TcpStream::connect((self.hostname.as_str(),self.port)).await?;
+        let stream: TcpStream = TcpStream::connect((self.hostname.as_str(),self.port))
+            .instrument(tracing::debug_span!("TCP connect"))
+            .await?;
+
         trace!(target: "tls_sender_init", "TCP connected");
 
         let connector = TlsConnector::from(Arc::new(get_client_config()));
@@ -42,7 +48,11 @@ impl Sender {
 
         let server_name = ServerName::try_from(self.hostname.as_str())?;
 
-        self.send_stream = Some(connector.connect(server_name,stream).await?);
+        self.send_stream = Some(
+            connector.connect(server_name,stream)
+            .instrument(tracing::debug_span!("TLS connect"))
+            .await?
+        );
 
         debug!(target: "tls_sender_init", "TLS stream connected");
         
