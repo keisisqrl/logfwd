@@ -4,7 +4,7 @@
 
 use crate::{FwdMsg, Shutdown, Error};
 use futures_util::{Stream, Future};
-use log::{trace,debug};
+use tracing::{trace,debug};
 use std::{
     pin::Pin,
     task::{Context, Poll},

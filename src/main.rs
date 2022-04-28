@@ -10,15 +10,14 @@ use tokio::sync::broadcast;
 use logfwd::udp_recv::Receiver;
 use logfwd::tls_send::Sender;
 use logfwd::clean_kill;
+use console_subscriber;
 
-use log::{LevelFilter, debug, trace};
+use tracing::{debug, trace};
 use tokio::try_join;
 
 #[tokio::main]
 async fn main() {
-    systemd_journal_logger::init().unwrap();
-
-    log::set_max_level(LevelFilter::Info);
+    console_subscriber::init();
 
     debug!("Init journald logging");
 

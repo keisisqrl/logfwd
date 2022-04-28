@@ -13,7 +13,7 @@ use std::sync::Arc;
 use rustls::client::ServerName;
 
 use tls::get_client_config;
-use log::{trace,debug};
+use tracing::{trace,debug};
 
 pub struct Sender {
     send_stream: Option<TlsStream<TcpStream>>,

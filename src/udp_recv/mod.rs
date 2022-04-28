@@ -15,7 +15,7 @@ use tokio_util::sync::PollSender;
 use futures_util::Stream;
 use crate::Error;
 use pin_project::pin_project;
-use log::debug;
+use tracing::debug;
 
 #[pin_project]
 pub struct Receiver {

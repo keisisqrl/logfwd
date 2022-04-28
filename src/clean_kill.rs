@@ -4,7 +4,7 @@
 
 use crate::{Error, FwdMsg, Shutdown};
 use libsystemd::daemon;
-use log::info;
+use tracing::info;
 use tokio::{signal::unix::{signal, Signal, SignalKind}, sync::{mpsc::Sender, broadcast}};
 
 use std::{
