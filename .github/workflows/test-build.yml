@@ -1,7 +1,7 @@
 on:
   push:
     branches: [main]
-  pull-request:
+  pull_request:
     branches: '*'
 
 name: test build
