@@ -17,4 +17,4 @@ jobs:
           toolchain: stable
       - uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: check
