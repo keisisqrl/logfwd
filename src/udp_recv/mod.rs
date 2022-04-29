@@ -23,7 +23,8 @@ pub struct Receiver {
     send_channel: PollSender<FwdMsg>,
     #[pin]
     bcast_stream: BroadcastStream<Shutdown>,
-    buf_vec: Vec<u8>
+    buf_vec: Vec<u8>,
+    buf_init: usize
 }
 
 impl Receiver {
@@ -39,7 +40,8 @@ impl Receiver {
             recv_socket: tokio_socket,
             send_channel: PollSender::new(send_half.clone()),
             bcast_stream: BroadcastStream::from(bcast_send.subscribe()),
-            buf_vec: Vec::with_capacity(buf_len)
+            buf_vec: Vec::with_capacity(buf_len),
+            buf_init: 0
         };
     }
 
@@ -66,6 +68,7 @@ impl Future for Receiver {
         }
 
         let mut readbuf = ReadBuf::uninit(this.buf_vec.spare_capacity_mut());
+        unsafe { readbuf.assume_init(this.buf_init); }
 
         match this.recv_socket.poll_recv(cx,&mut readbuf) {
             Poll::Ready(Ok(())) => {
@@ -82,6 +85,9 @@ impl Future for Receiver {
                 if let Poll::Ready(_) = this.recv_socket.poll_recv_ready(cx) {
                     cx.waker().wake_by_ref();
                 }
+                
+                this.buf_init = readbuf.initialized().len();
+                
                 Poll::Pending
             }
 
