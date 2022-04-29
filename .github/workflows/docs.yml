@@ -15,7 +15,7 @@ jobs:
           toolchain: stable
       - uses: actions-rs/cargo@v1
         with:
-          command: doc
+          command: doc --no-deps
       - name: Create index.html
         uses: finnp/create-file-action@master
         env:
