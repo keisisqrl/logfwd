@@ -68,7 +68,7 @@ impl Future for Receiver {
         }
 
         let mut readbuf = ReadBuf::uninit(this.buf_vec.spare_capacity_mut());
-        unsafe { readbuf.assume_init(this.buf_init); }
+        unsafe { readbuf.assume_init(*this.buf_init); }
 
         match this.recv_socket.poll_recv(cx,&mut readbuf) {
             Poll::Ready(Ok(())) => {
@@ -86,7 +86,7 @@ impl Future for Receiver {
                     cx.waker().wake_by_ref();
                 }
                 
-                this.buf_init = readbuf.initialized().len();
+                *this.buf_init = readbuf.initialized().len();
                 
                 Poll::Pending
             }
