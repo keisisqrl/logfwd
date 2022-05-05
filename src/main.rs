@@ -1,7 +1,8 @@
 use logfwd::{clean_kill, tls_send::Sender, udp_recv::Receiver};
 
 use std::os::unix::prelude::RawFd;
-use std::{env, os::unix::io::IntoRawFd};
+use std::{env};
+
 use tokio::sync::{broadcast, mpsc};
 use tokio::try_join;
 use tracing::{debug, trace};
@@ -11,6 +12,8 @@ use libsystemd::{
     activation,
     daemon::{self, NotifyState},
 };
+#[cfg(target_os = "linux")]
+use std::os::unix::io::IntoRawFd;
 
 #[tokio::main]
 async fn main() {
