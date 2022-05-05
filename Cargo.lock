@@ -599,6 +599,7 @@ dependencies = [
  "console-subscriber",
  "futures-util",
  "libsystemd",
+ "once_cell",
  "pin-project",
  "rustls",
  "systemd-journal-logger",
