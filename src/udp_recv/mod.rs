@@ -91,7 +91,7 @@ impl Future for Receiver {
                     unreachable!();
                 }
 
-                if let Poll::Ready(_) = this.recv_socket.poll_recv_ready(cx) {
+                if this.recv_socket.poll_recv_ready(cx).is_ready() {
                     cx.waker().wake_by_ref();
                 }
 
