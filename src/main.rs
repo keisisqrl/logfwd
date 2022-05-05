@@ -12,9 +12,6 @@ use libsystemd::{
     daemon::{self, NotifyState},
 };
 
-#[cfg(target_os = "macos")]
-use raunch;
-
 #[tokio::main]
 async fn main() {
     console_subscriber::init();
