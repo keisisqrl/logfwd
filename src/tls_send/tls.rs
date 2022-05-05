@@ -16,7 +16,7 @@ fn get_root_store() -> rustls::RootCertStore {
             }
         )
     );
-    return root_store;
+    root_store
 }
 
 pub fn get_client_config() -> rustls::ClientConfig {

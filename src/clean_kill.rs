@@ -38,7 +38,7 @@ impl Future for Handler {
     type Output = Result<(),Error>;
 
     fn poll(mut self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
-        if let Poll::Pending = self.signal.poll_recv(cx) {
+        if self.signal.poll_recv(cx).is_pending() {
             Poll::Pending
         } else {
             info!(target: "clean_kill", "sigterm received, shutting down");

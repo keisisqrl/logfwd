@@ -61,12 +61,12 @@ impl Future for Flusher {
         let period = self.period;
         let mut this = self.project();
 
-        if let Poll::Ready(_) = this.bcast_stream.as_mut().poll_next(cx) {
+        if this.bcast_stream.as_mut().poll_next(cx).is_ready() {
             debug!("flusher shutting down");
             return Poll::Ready(Ok(()));
         }
 
-        if let Poll::Pending = this.sleep.as_mut().poll(cx) {
+        if this.sleep.as_mut().poll(cx).is_pending() {
             return Poll::Pending;
         }
         trace!(target: "flusher", "flusher waking"); 

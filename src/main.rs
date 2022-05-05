@@ -10,7 +10,7 @@ use tokio::sync::broadcast;
 use logfwd::udp_recv::Receiver;
 use logfwd::tls_send::Sender;
 use logfwd::clean_kill;
-use console_subscriber;
+
 
 use tracing::{debug, trace};
 use tokio::try_join;

@@ -68,7 +68,7 @@ impl Future for Receiver {
     fn poll(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Self::Output> {
         let mut this = self.project();
 
-        if let Poll::Ready(_) = this.bcast_stream.as_mut().poll_next(cx) {
+        if this.bcast_stream.as_mut().poll_next(cx).is_ready() {
             debug!("udp receiver shutting down");
             return Poll::Ready(Ok(()));
         }
@@ -81,13 +81,13 @@ impl Future for Receiver {
             _ => (),
         }
 
-        match this.recv_socket.poll_recv(cx, &mut this.readbuf) {
+        match this.recv_socket.poll_recv(cx, this.readbuf) {
             Poll::Ready(Ok(())) => {
                 let msg = Vec::from(this.readbuf.filled());
 
                 let msg = FwdMsg::Message(msg.into_boxed_slice());
 
-                if let Err(_) = this.send_channel.send_item(msg) {
+                if this.send_channel.send_item(msg).is_err() {
                     unreachable!();
                 }
 
