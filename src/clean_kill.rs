@@ -3,15 +3,17 @@
 //! Provides a signal handler on SIGTERM that shuts down cleanly
 
 use crate::{Error, FwdMsg, Shutdown};
-use libsystemd::daemon;
+
 use tracing::info;
 use tokio::{signal::unix::{signal, Signal, SignalKind}, sync::{mpsc::Sender, broadcast}};
-
 use std::{
     future::Future,
     pin::Pin,
     task::{Context, Poll},
 };
+
+#[cfg(target_os = "linux")]
+use libsystemd::daemon;
 
 /// A future/task that returns only after the program receives a SIGTERM
 /// and messages have been sent to all other loops.
@@ -42,6 +44,7 @@ impl Future for Handler {
             Poll::Pending
         } else {
             info!(target: "clean_kill", "sigterm received, shutting down");
+            #[cfg(target_os = "linux")]
             daemon::notify(false, &[daemon::NotifyState::Stopping]).unwrap();
             self.bcast_send.send(Shutdown).unwrap();
             self.channel.try_send(FwdMsg::Close).unwrap();
