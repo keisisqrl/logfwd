@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Handler","A future/task that returns only after the program receives a SIGTERM and messages have been sent to all other loops."]]});

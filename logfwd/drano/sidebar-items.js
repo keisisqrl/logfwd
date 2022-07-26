@@ -1,0 +1,1 @@
+initSidebarItems({"struct":[["Flusher","`Flusher` is a custom future which never returns."]]});

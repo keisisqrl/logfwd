@@ -1,0 +1,1 @@
+initSidebarItems({"enum":[["FwdMsg","`FwdMsg` is used for messaging between the sender and receiver half. It is sent over a tokio::sync::mpsc bounded channel."]],"mod":[["clean_kill","clean_kill"],["drano","Drano"],["error",""],["tls_send",""],["udp_recv",""]],"struct":[["Shutdown","Shutdown message"]]});
